@@ -30,7 +30,13 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# Windows
+Thumbs.db
+Desktop.ini
+
 # local env files
+.env
+.env.local
 .env*.local
 
 # typescript

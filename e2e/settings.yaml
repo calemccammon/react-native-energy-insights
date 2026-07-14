@@ -1,0 +1,15 @@
+appId: host.exp.exponent
+---
+- launchApp
+- tapOn:
+    text: "Settings"
+- assertVisible:
+    text: "APPEARANCE"
+- tapOn:
+    id: "dark-mode-toggle"
+- assertVisible:
+    text: "DEFAULT STATE"
+- tapOn:
+    id: "state-option-TX"
+- assertVisible:
+    text: "Texas"

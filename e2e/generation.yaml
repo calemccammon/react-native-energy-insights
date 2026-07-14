@@ -1,0 +1,13 @@
+appId: host.exp.exponent
+---
+- launchApp
+- tapOn:
+    text: "Generation"
+- assertVisible:
+    text: "Generation by Fuel Type"
+- assertVisible:
+    text: "Natural Gas"
+- assertVisible:
+    text: "Wind"
+- assertVisible:
+    text: "Nuclear"

@@ -1,0 +1,19 @@
+appId: host.exp.exponent
+---
+- launchApp
+- tapOn:
+    text: "Prices"
+- assertVisible:
+    id: "prices-list"
+- tapOn:
+    id: "price-item-CA"
+- assertVisible:
+    text: "Residential Electricity Price"
+- assertVisible:
+    text: "California"
+- assertVisible:
+    id: "price-trend-chart"
+- assertVisible:
+    text: "Latest"
+- assertVisible:
+    text: "Average"

@@ -1,0 +1,13 @@
+appId: host.exp.exponent
+---
+- launchApp
+- assertVisible:
+    text: "U.S. Electricity Overview"
+- assertVisible:
+    id: "card-total-generation"
+- assertVisible:
+    id: "card-renewable-pct"
+- assertVisible:
+    id: "card-avg-price"
+- assertVisible:
+    text: "Generation Mix"

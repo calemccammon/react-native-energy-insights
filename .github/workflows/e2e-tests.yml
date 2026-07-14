@@ -1,0 +1,58 @@
+name: E2E Tests (Maestro)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Maestro E2E on iOS Simulator
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Expo CLI
+        run: npm install -g expo-cli
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Boot iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15" || true
+          sleep 10
+
+      - name: Start Expo in background
+        env:
+          EXPO_PUBLIC_EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: |
+          npx expo start --ios --no-bundler &
+          sleep 30
+
+      - name: Run Maestro flows
+        run: |
+          maestro test e2e/dashboard.yaml
+          maestro test e2e/generation.yaml
+          maestro test e2e/prices_search.yaml
+          maestro test e2e/state_detail.yaml
+          maestro test e2e/settings.yaml
+
+      - name: Upload Maestro screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-screenshots
+          path: ~/.maestro/tests/

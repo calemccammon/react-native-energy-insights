@@ -1,0 +1,16 @@
+appId: host.exp.exponent
+---
+- launchApp
+- tapOn:
+    text: "Prices"
+- assertVisible:
+    id: "prices-list"
+- tapOn:
+    id: "search-input"
+- inputText: "California"
+- assertVisible:
+    text: "California"
+- clearText
+- inputText: "Texas"
+- assertVisible:
+    text: "Texas"
