@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { cleanup, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useGenerationMix } from '../../src/hooks/useGenerationMix';
@@ -19,13 +19,24 @@ const mockStats = {
   ],
 };
 
+let client: QueryClient;
+
 function wrapper({ children }: { children: React.ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
 describe('useGenerationMix', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  });
+
+  // The hooks keep unused queries for 24 hours. Clearing the cache cancels
+  // those timers so that Jest can exit.
+  afterEach(async () => {
+    await cleanup();
+    client.clear();
+  });
 
   it('returns data on success', async () => {
     mockFetchRaw.mockResolvedValue({});
@@ -47,8 +58,16 @@ describe('useGenerationMix', () => {
   });
 
   it('starts in loading state', async () => {
-    mockFetchRaw.mockImplementation(() => new Promise(() => {}));
+    let finishFetch: (raw: unknown) => void = () => {};
+    mockFetchRaw.mockImplementation(
+      () => new Promise((resolve) => { finishFetch = resolve; })
+    );
+    mockBuildStats.mockReturnValue(mockStats);
+
     const { result } = await renderHook(() => useGenerationMix(), { wrapper });
     expect(result.current.isLoading).toBe(true);
+
+    finishFetch({});
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 });

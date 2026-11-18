@@ -45,3 +45,6 @@ Desktop.ini
 # generated native folders
 /ios
 /android
+
+# Jest coverage
+coverage/

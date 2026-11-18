@@ -17,7 +17,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.energyinsights"
+      "package": "com.calemccammon.energyinsights"
     },
     "web": {
       "favicon": "./assets/favicon.png"

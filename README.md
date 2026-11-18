@@ -6,13 +6,15 @@ A React Native and TypeScript mobile app, built with [Expo](https://expo.dev/), 
   <img src="docs/screenshot-dashboard.png" alt="Dashboard screen with four summary cards and a generation mix pie chart" width="320" />
 </p>
 
+The screenshot predates two changes: generation figures now cover individual fuels only, and prices cover the 50 states only. Its totals, pie legend and "States Reporting" count differ from what the current code shows.
+
 ## Screens
 
 | Screen | Contents |
 |---|---|
-| Dashboard | Four summary cards (total generation, renewable share, average residential price, number of areas reporting a price) and a pie chart of the six largest generation categories |
-| Generation | Bar chart of net generation for the latest month, up to eight categories, followed by a list of every category with its value and a badge on the renewable ones |
-| Prices | Searchable `FlatList` of residential prices in cents per kWh, filtered by name or two-letter code. Tapping a row opens State Detail |
+| Dashboard | Four summary cards (total generation, renewable share, mean of the state residential prices, number of states reporting a price) and a pie chart of the six largest fuels |
+| Generation | Bar chart of net generation for the latest month, up to eight fuels, followed by a list of every charted fuel with its value in TWh and a badge on the renewable ones |
+| Prices | Searchable `FlatList` of residential prices by state in cents per kWh, filtered by name or two-letter code. The default state from Settings is listed first and the rest follow by name. Tapping a row opens State Detail |
 | State Detail | Line chart of the last 12 monthly residential prices for one state, with latest, average, minimum and maximum |
 | Settings | Dark mode switch and a default-state picker |
 
@@ -45,20 +47,23 @@ src/api/eiaClient.ts
     fetchGenerationRaw()        national monthly generation, all sectors
     fetchRetailPricesRaw()      residential price, newest 200 rows
     fetchStatePriceTrendRaw()   residential price, 12 months, one state
-    buildGenerationStats() / buildStatePrices() / buildPriceTrend()
+    buildGenerationStats() / buildStatePrices() / buildPriceTrend() / pinStateFirst()
     |  TanStack Query
 src/hooks/  useGenerationMix / useRetailPrices / useStateDetail
     |
 src/screens/  Dashboard / Generation / Prices / StateDetail / Settings
 ```
 
-`eiaClient.ts` separates the HTTP calls from the transforms. The fetch functions return EIA rows unchanged. The `build*` functions are pure and produce the shapes the screens render: generation is converted from thousand MWh to TWh and reduced to the latest period, prices are reduced to the newest row per area and sorted by name, and the trend is reversed into chronological order.
+`eiaClient.ts` separates the HTTP calls from the transforms. The fetch functions return EIA rows unchanged. The `build*` functions are pure and produce the shapes the screens render. The trend is reversed into chronological order. The other two transforms also filter what EIA returns:
+
+- `buildGenerationStats` converts thousand MWh to TWh and keeps the latest period. EIA returns aggregate rows (all fuels, fossil fuels, all renewables and similar) in the same list as individual fuels. The transform charts only the nine codes in `INDIVIDUAL_FUELS` (`NG`, `COL`, `NUC`, `WND`, `SUN`, `HYC`, `HPS`, `GEO`, `OTH`) and takes the total from EIA's `ALL` row. The renewable share is wind, solar, conventional hydro and geothermal divided by that total.
+- `buildStatePrices` keeps the newest row with a price for each of the 50 states in `src/api/usStates.ts` and sorts by name. Rows for the U.S. total, census regions and the District of Columbia are dropped.
 
 Each hook wraps one fetch and its transform in a `useQuery` with a one-hour stale time and a 24-hour garbage-collection time. The query client retries a failed request twice. Every screen renders a spinner while loading and the error message on failure.
 
 Navigation is a native stack with two routes. The first is the bottom tab navigator (Dashboard, Generation, Prices, Settings) and the second is State Detail, which is pushed over the tabs and takes `stateid` and `stateDescription` as typed route params.
 
-Dark mode and the default state live in a Zustand store (`src/store/useAppStore.ts`). `ThemeContext` reads the dark mode flag and provides one of two colour token sets from `src/theme/colors.ts`. Price rows are coloured green below 12¢, amber from 12¢ to 20¢ and red at 20¢ and above.
+Dark mode and the default state live in a Zustand store (`src/store/useAppStore.ts`) that the `persist` middleware writes to AsyncStorage. `ThemeContext` reads the dark mode flag and provides one of two colour token sets from `src/theme/colors.ts`. Price rows are coloured green below 12¢, amber from 12¢ to 20¢ and red at 20¢ and above.
 
 ### EIA endpoints
 
@@ -88,13 +93,14 @@ App.tsx                  QueryClientProvider, ThemeProvider, NavigationContainer
 src/
   api/eiaClient.ts       EIA requests and transforms
   api/types.ts           response types, fuel labels and colours
+  api/usStates.ts        the 50 states and their two-letter codes
   components/            SummaryCard, GenerationChart, PriceListItem, LoadingSpinner
   hooks/                 one TanStack Query hook per data set
   navigation/            root stack, tab navigator, route param types
   screens/               the five screens
   store/useAppStore.ts   Zustand store
   theme/                 colour tokens and ThemeContext
-__tests__/               Jest tests (components, hooks, store)
+__tests__/               Jest tests (api, components, hooks, store)
 e2e/                     Maestro flows
 .github/workflows/       unit-tests.yml, e2e-tests.yml
 ```
@@ -105,7 +111,9 @@ e2e/                     Maestro flows
 npm test
 ```
 
-The Jest suite has 21 tests in 6 files. They cover three components (`SummaryCard`, `PriceListItem`, `LoadingSpinner`), the success, error and loading states of `useGenerationMix` and `useRetailPrices`, and the store actions. No API key or network access is needed. The hook tests mock the whole of `eiaClient.ts`, so the three `build*` transform functions, the screens, `GenerationChart` and `useStateDetail` have no unit tests.
+The Jest suite has 36 tests in 7 files. They cover the transforms and query-string builder in `eiaClient.ts` (including a generation fixture that mixes aggregate and individual fuel rows), three components (`SummaryCard`, `PriceListItem`, `LoadingSpinner`), the success, error and loading states of `useGenerationMix` and `useRetailPrices`, and the store's actions and persistence. No API key or network access is needed. The fetch functions, the screens, `GenerationChart` and `useStateDetail` have no unit tests.
+
+`npx tsc --noEmit` type-checks the source and the tests. CI does not run it.
 
 `unit-tests.yml` runs the suite with coverage on pushes to `main` and `develop` and on pull requests to `main`.
 
@@ -118,20 +126,16 @@ maestro test e2e/dashboard.yaml
 for f in e2e/*.yaml; do maestro test "$f"; done
 ```
 
-`e2e-tests.yml` runs the flows on a macOS runner with an iOS simulator. It is triggered manually (`workflow_dispatch`) only. Its single run, on the first push to `main`, failed, and the push trigger was then removed. The flows have not passed in CI.
+`e2e-tests.yml` runs the flows on a macOS runner with an iOS simulator. It reads the API key from the repository secret `EXPO_PUBLIC_EIA_API_KEY`. It is triggered manually (`workflow_dispatch`) only. Its single run, on the first push to `main`, failed, and the push trigger was then removed. The flows have not passed in CI.
 
 ## Limitations
 
-- The generation totals are too high. The generation request does not filter by fuel type, and `buildGenerationStats` excludes only the `ALL` row. EIA also returns aggregate categories such as "fossil fuels" and "all renewables", and these are summed and charted together with the individual fuels. The screenshot above shows the effect in the pie legend. The total and the renewable share on the Dashboard are therefore not reliable figures.
-- The Prices list is not limited to the 50 states. `buildStatePrices` keeps every area the endpoint returns except the `US` total, which gave 61 entries when the screenshot was taken. The average price on the Dashboard is an unweighted mean over those entries.
-- The Generation screen subtitle labels the unit "Thousand TWh". The values are TWh.
-- Settings are not kept across app restarts. The store uses the Zustand `persist` middleware with an in-memory storage object, chosen so that the app runs in Expo Go without the native AsyncStorage module. `@react-native-async-storage/async-storage` is installed but not used by the app.
-- The default state chosen in Settings is stored but nothing reads it. The Prices list is always sorted by name.
-- `npx tsc --noEmit` reports errors and CI does not run it. One error is in `src/screens/StateDetailScreen.tsx`, where a `testID` prop is passed to `LineChart` and the chart library's types do not declare it. The others are unresolved Jest globals in the test files.
-- Both workflows read the key from a secret named `EIA_API_KEY`. The unit tests do not use it. The Maestro workflow does.
+- The charted fuels do not add up to the total. The total is EIA's all-fuels figure, and fuels outside the nine charted codes (petroleum and biomass, for example) appear in it but not in the charts. Biomass is also absent from the renewable share.
+- The list of individual fuel codes is fixed in `src/api/types.ts`. A code EIA reports that is not in the list is ignored.
+- The average price on the Dashboard is an unweighted mean of the state prices, so it differs from the national average price.
+- Settings persist only where the AsyncStorage 3.x native module is in the binary. The project installs `@react-native-async-storage/async-storage` 3.1.1, while Expo SDK 57 pins 2.2.0 in `bundledNativeModules.json`. When the module is missing, which is expected in Expo Go, the store keeps settings in memory for the session.
+- `e2e-tests.yml` has never passed, as described above.
 
-## Licence and data
-
-MIT. See [LICENSE](LICENSE).
+## Data
 
 Data is from the U.S. Energy Information Administration (EIA) API v2.
