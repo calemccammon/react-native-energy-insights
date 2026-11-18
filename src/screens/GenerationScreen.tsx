@@ -4,8 +4,6 @@ import { useGenerationMix } from '../hooks/useGenerationMix';
 import { GenerationChart } from '../components/GenerationChart';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useTheme } from '../theme/ThemeContext';
-import { RENEWABLE_FUELS } from '../api/types';
-import type { FuelTypeId } from '../api/types';
 
 export default function GenerationScreen() {
   const colors = useTheme();
@@ -32,7 +30,7 @@ export default function GenerationScreen() {
     >
       <Text style={[styles.title, { color: colors.text }]}>Generation by Fuel Type</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {stats.period} · Thousand TWh · All Sectors · United States
+        {stats.period} · TWh · All Sectors · United States
       </Text>
 
       <GenerationChart data={stats.byFuel} maxBars={8} />
@@ -50,7 +48,7 @@ export default function GenerationScreen() {
           <Text style={[styles.legendValue, { color: colors.textSecondary }]}>
             {item.generationTwh.toFixed(1)} TWh
           </Text>
-          {(RENEWABLE_FUELS as FuelTypeId[]).includes(item.fuelType) && (
+          {item.isRenewable && (
             <View style={[styles.badge, { backgroundColor: colors.successLight }]}>
               <Text style={[styles.badgeText, { color: colors.renewable }]}>renewable</Text>
             </View>

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { cleanup, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useRetailPrices } from '../../src/hooks/useRetailPrices';
@@ -13,13 +13,24 @@ const mockPrices = [
   { stateid: 'TX', stateDescription: 'Texas', price: 12.1, period: '2024-06' },
 ];
 
+let client: QueryClient;
+
 function wrapper({ children }: { children: React.ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
 describe('useRetailPrices', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  });
+
+  // The hooks keep unused queries for 24 hours. Clearing the cache cancels
+  // those timers so that Jest can exit.
+  afterEach(async () => {
+    await cleanup();
+    client.clear();
+  });
 
   it('returns data on success', async () => {
     mockFetchRaw.mockResolvedValue({});
@@ -42,8 +53,16 @@ describe('useRetailPrices', () => {
   });
 
   it('starts in loading state', async () => {
-    mockFetchRaw.mockImplementation(() => new Promise(() => {}));
+    let finishFetch: (raw: unknown) => void = () => {};
+    mockFetchRaw.mockImplementation(
+      () => new Promise((resolve) => { finishFetch = resolve; })
+    );
+    mockBuildPrices.mockReturnValue(mockPrices);
+
     const { result } = await renderHook(() => useRetailPrices(), { wrapper });
     expect(result.current.isLoading).toBe(true);
+
+    finishFetch({});
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 });

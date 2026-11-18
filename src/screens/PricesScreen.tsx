@@ -10,6 +10,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useRetailPrices } from '../hooks/useRetailPrices';
+import { pinStateFirst } from '../api/eiaClient';
+import { useAppStore } from '../store/useAppStore';
 import { PriceListItem } from '../components/PriceListItem';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useTheme } from '../theme/ThemeContext';
@@ -23,7 +25,9 @@ export default function PricesScreen() {
   const { data, isLoading, isError, error } = useRetailPrices();
   const [query, setQuery] = useState('');
 
-  const filtered = (data ?? []).filter(
+  const selectedState = useAppStore((s) => s.selectedState);
+
+  const filtered = pinStateFirst(data ?? [], selectedState).filter(
     (s) =>
       s.stateDescription.toLowerCase().includes(query.toLowerCase()) ||
       s.stateid.toLowerCase().includes(query.toLowerCase())

@@ -33,7 +33,14 @@ export type FuelTypeId =
   | 'OTH'  // Other
   | 'ALL'; // All fuels (aggregate)
 
-export const RENEWABLE_FUELS: FuelTypeId[] = ['WND', 'SUN', 'HYC', 'GEO', 'HPS'];
+// Fuels charted individually. EIA also returns aggregate rows (ALL and
+// categories such as fossil fuels or all renewables) that overlap these.
+export const INDIVIDUAL_FUELS: FuelTypeId[] = [
+  'NG', 'COL', 'NUC', 'WND', 'SUN', 'HYC', 'HPS', 'GEO', 'OTH',
+];
+
+// Pumped storage is left out: it stores electricity generated elsewhere.
+export const RENEWABLE_FUELS: FuelTypeId[] = ['WND', 'SUN', 'HYC', 'GEO'];
 
 export const FUEL_LABELS: Record<FuelTypeId, string> = {
   NG: 'Natural Gas',

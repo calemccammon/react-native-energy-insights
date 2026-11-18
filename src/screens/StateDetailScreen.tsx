@@ -69,17 +69,18 @@ export default function StateDetailScreen() {
         {stateDescription} · Last 12 months · ¢/kWh
       </Text>
 
-      <LineChart
-        testID="price-trend-chart"
-        data={chartData}
-        width={screenWidth - 32}
-        height={220}
-        chartConfig={chartConfig}
-        bezier
-        yAxisLabel=""
-        yAxisSuffix="¢"
-        style={styles.chart}
-      />
+      <View testID="price-trend-chart">
+        <LineChart
+          data={chartData}
+          width={screenWidth - 32}
+          height={220}
+          chartConfig={chartConfig}
+          bezier
+          yAxisLabel=""
+          yAxisSuffix="¢"
+          style={styles.chart}
+        />
+      </View>
 
       {/* Stats row */}
       <View style={styles.statsRow}>

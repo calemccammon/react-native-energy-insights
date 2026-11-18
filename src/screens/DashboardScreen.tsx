@@ -79,9 +79,9 @@ export default function DashboardScreen() {
       <View style={[styles.row, { marginTop: 12 }]}>
         <SummaryCard
           testID="card-avg-price"
-          label="Avg Residential Price"
+          label="Avg State Price"
           value={`${avgPrice.toFixed(1)}¢`}
-          subtext="per kWh"
+          subtext="residential, per kWh"
           accentColor="#f59e0b"
         />
         <View style={{ width: 12 }} />
