@@ -111,7 +111,7 @@ e2e/                     Maestro flows
 npm test
 ```
 
-The Jest suite has 36 tests in 7 files. They cover the transforms and query-string builder in `eiaClient.ts` (including a generation fixture that mixes aggregate and individual fuel rows), three components (`SummaryCard`, `PriceListItem`, `LoadingSpinner`), the success, error and loading states of `useGenerationMix` and `useRetailPrices`, and the store's actions and persistence. No API key or network access is needed. The fetch functions, the screens, `GenerationChart` and `useStateDetail` have no unit tests.
+The Jest tests cover the transforms and query-string builder in `eiaClient.ts` (including a generation fixture that mixes aggregate and individual fuel rows), three components (`SummaryCard`, `PriceListItem`, `LoadingSpinner`), the success, error and loading states of `useGenerationMix` and `useRetailPrices`, and the store's actions and persistence. No API key or network access is needed. The fetch functions, the screens, `GenerationChart` and `useStateDetail` have no unit tests.
 
 `npx tsc --noEmit` type-checks the source and the tests. CI does not run it.
 
@@ -119,14 +119,14 @@ The Jest suite has 36 tests in 7 files. They cover the transforms and query-stri
 
 ### Maestro flows
 
-`e2e/` holds five Maestro flows, one per screen. They use the app id `host.exp.exponent`, so they drive the project inside Expo Go and need it already open there on a simulator or device. They also need a working EIA key, because they assert on live data.
+`e2e/` holds one Maestro flow for each screen. They use the app id `host.exp.exponent`, so they drive the project inside Expo Go and need it already open there on a simulator or device. They also need a working EIA key, because they assert on live data.
 
 ```bash
 maestro test e2e/dashboard.yaml
 for f in e2e/*.yaml; do maestro test "$f"; done
 ```
 
-`e2e-tests.yml` runs the flows on a macOS runner with an iOS simulator. It reads the API key from the repository secret `EXPO_PUBLIC_EIA_API_KEY`. It is triggered manually (`workflow_dispatch`) only. Its single run, on the first push to `main`, failed, and the push trigger was then removed. The flows have not passed in CI.
+`e2e-tests.yml` runs the flows on a macOS runner with an iOS simulator. It reads the API key from the repository secret `EXPO_PUBLIC_EIA_API_KEY`. It runs only when started by hand (`workflow_dispatch`). It ran once, on the first push to `main`, and failed; the push trigger was then removed, so the flows have never passed in CI.
 
 ## Limitations
 
@@ -134,8 +134,3 @@ for f in e2e/*.yaml; do maestro test "$f"; done
 - The list of individual fuel codes is fixed in `src/api/types.ts`. A code EIA reports that is not in the list is ignored.
 - The average price on the Dashboard is an unweighted mean of the state prices, so it differs from the national average price.
 - Settings persist only where the AsyncStorage 3.x native module is in the binary. The project installs `@react-native-async-storage/async-storage` 3.1.1, while Expo SDK 57 pins 2.2.0 in `bundledNativeModules.json`. When the module is missing, which is expected in Expo Go, the store keeps settings in memory for the session.
-- `e2e-tests.yml` has never passed, as described above.
-
-## Data
-
-Data is from the U.S. Energy Information Administration (EIA) API v2.
